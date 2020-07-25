@@ -6,6 +6,9 @@ using Android.Widget;
 using Android.Views;
 using System;
 using System.Text;
+using Android.Support.Design.Widget;
+using Xamarin.Essentials;
+using Android.Text.Format;
 
 namespace Calculator
 {
@@ -20,6 +23,7 @@ namespace Calculator
         private bool isOperatorClicked = false;
         private double? result = null;
         StringBuilder operationLogBuilder = new StringBuilder();
+        private Snackbar snackbar = null;
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
@@ -36,6 +40,28 @@ namespace Calculator
         [Java.Interop.Export("ButtonClick")]
         public void ButtonClick(View v)
         {
+            try
+            {
+                Vibration.Vibrate(TimeSpan.FromMilliseconds(50));
+            }
+            catch (FeatureNotSupportedException)
+            {
+                snackbar = Snackbar.Make(v, "Feature Not Supported", Snackbar.LengthIndefinite).SetAction("Ok", (v) =>
+                {
+
+                });
+                snackbar.Show();
+                // Feature not supported on device
+            }
+            catch (Exception)
+            {
+                snackbar = Snackbar.Make(v, "Unknown Error", Snackbar.LengthIndefinite).SetAction("Ok", (v) =>
+                {
+
+                });
+                snackbar.Show();
+                // Other error has occurred.
+            }
             /*
              * Here we're using this View v as the representative of Button in axml.
              * So we need to explicitely make this View a Button
@@ -67,7 +93,7 @@ namespace Calculator
             }
             else if (("CE").Contains(b.Text))
             {
-                ClearEntry();
+                ClearEntry(v);
             }
             else if ("±".Contains(b.Text))
             {
@@ -263,39 +289,50 @@ namespace Calculator
 
         }
 
-        private void ClearEntry()
+        private void ClearEntry(View view)
         {
 
-            int toEliminateLength1 = numbers[0] != null ? numbers[0].Length - result.ToString().Length : 0;
-            int toEliminateLength2 = 1;
-            int toEliminateLength3 = numbers[1] != null ? numbers[1].Length : 0;
-
-            int totalEliminationLength = toEliminateLength1 + toEliminateLength2 + toEliminateLength3;
-
-
-            //Empty the last entry of operationBuilderLog
-            for (int i = (operationLogBuilder.Length - totalEliminationLength); i < operationLogBuilder.Length; i++)
+            try
             {
-                operationLogBuilder[i] = '\0';
+                int toEliminateLength1 = numbers[0] != null ? numbers[0].Length - result.ToString().Length : 0;
+                int toEliminateLength2 = 1;
+                int toEliminateLength3 = numbers[1] != null ? numbers[1].Length : 0;
+
+                int totalEliminationLength = toEliminateLength1 + toEliminateLength2 + toEliminateLength3;
+
+
+                //Empty the last entry of operationBuilderLog
+                for (int i = (operationLogBuilder.Length - totalEliminationLength); i < operationLogBuilder.Length; i++)
+                {
+                    operationLogBuilder[i] = '\0';
+                }
+
+                textViewOperationLog.Text = operationLogBuilder.ToString();
+
+                if (!operationLogBuilder.ToString().Contains("0123456789."))
+                {
+                    textViewOperationLog.Text = "0";
+                }
+
+                isOperatorClicked = false;
+                numbers[0] = null;
+                numbers[1] = null;
+                _operator = null;
+                UpdateCalculatorTextView();
+                textViewResult.Text = "0";
+                if (result != null)
+                {
+                    textViewResult.Text = $"{result}";
+                    numbers[0] = result.ToString();
+                }
             }
-
-            textViewOperationLog.Text = operationLogBuilder.ToString();
-
-            if (!operationLogBuilder.ToString().Contains("0123456789."))
+            catch (Exception)
             {
-                textViewOperationLog.Text = "0";
-            }
+                snackbar = Snackbar.Make(view, "No Entry to Clear", Snackbar.LengthIndefinite).SetAction("Ok", (v) =>
+                {
 
-            isOperatorClicked = false;
-            numbers[0] = null;
-            numbers[1] = null;
-            _operator = null;
-            UpdateCalculatorTextView();
-            textViewResult.Text = "0";
-            if (result != null)
-            {
-                textViewResult.Text = $"{result}";
-                numbers[0] = result.ToString();
+                });
+                snackbar.Show();
             }
         }
 
